@@ -33,6 +33,10 @@ Entweder den Badge oben anklicken (öffnet das Repository direkt in HACS auf dei
 
 ## Konfiguration
 
+Die Karte hat einen **visuellen Editor**: Beim Hinzufügen/Bearbeiten erkennt sie automatisch alle vom Add-on angelegten Regionen (inkl. „Nur Feiertage"- und Suffix-Varianten) und bietet sie als Dropdown an. Dazu gibt es Schalter für alle Kartenbereiche und einen Regler für die Streifenlänge.
+
+YAML geht natürlich weiterhin:
+
 ```yaml
 type: custom:schulferien-card
 title: Schulferien Bayern
@@ -44,7 +48,11 @@ prefix: schulferien_bayern
 | `prefix` | ✅ | – | Entity-ID-Präfix der Region, z. B. `schulferien_bayern` oder `feiertage_bayern` |
 | `title` | – | (leer) | Überschrift der Karte |
 | `suffix` | – | (leer) | Suffix, falls beim Anlegen der Region vergeben (z. B. `kinder`) |
-| `show_strip` | – | `true` | 14-Tage-Streifen anzeigen |
+| `show_badges` | – | `true` | Status-Badges (heute/morgen) anzeigen |
+| `show_strip` | – | `true` | Tages-Streifen anzeigen |
+| `strip_days` | – | `14` | Anzahl Tage im Streifen (3–14) |
+| `show_feiertag` | – | `true` | Nächsten Feiertag anzeigen |
+| `show_ferien` | – | `true` | Nächste Schulferien anzeigen (inkl. „läuft gerade") |
 
 Der `prefix` ist der Teil der Entity-IDs vor dem Entitätsnamen – einfach aus der Infobox „Entitäten" im Add-on ablesen: `binary_sensor.schulferien_bayern_heute_schulfrei` → `schulferien_bayern`.
 

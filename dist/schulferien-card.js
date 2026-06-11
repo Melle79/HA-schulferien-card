@@ -1,22 +1,57 @@
 /* Schulferien-Card – Lovelace Custom Card für den Schulferien & Feiertage Manager
  *
- * Beispiel-Konfiguration:
+ * Minimale Konfiguration:
  *   type: custom:schulferien-card
- *   title: Schulferien Bayern
- *   prefix: schulferien_bayern      # bzw. feiertage_bayern bei "Nur Feiertage"
- *   suffix: ""                      # optional, falls beim Anlegen ein Suffix vergeben wurde
- *   show_strip: true                # 14-Tage-Streifen anzeigen
+ *   prefix: schulferien_bayern
+ *
+ * Alle Optionen sind über den visuellen Editor einstellbar.
  */
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "1.1.0";
 console.info(`%c SCHULFERIEN-CARD %c v${CARD_VERSION} `,
   "color:#1a1408;background:#e8a23d;font-weight:700", "color:#e8a23d;background:#1f2630");
+
+const ENTITY_KEYS = [
+  "naechste_schulferien", "naechster_feiertag",
+  "heute_schulfrei", "morgen_schulfrei",
+  "heute_feiertag", "morgen_feiertag", "status",
+];
+
+/* Alle vom Add-on angelegten Regionen aus den Entitäten ableiten. */
+function detectRegions(hass) {
+  const found = new Map();
+  for (const eid of Object.keys(hass.states)) {
+    const m = eid.match(/^(?:sensor|binary_sensor)\.((?:schulferien|feiertage)_.+)$/);
+    if (!m) continue;
+    const oid = m[1];
+    for (const key of ENTITY_KEYS) {
+      const idx = oid.indexOf(`_${key}`);
+      if (idx > 0) {
+        const prefix = oid.slice(0, idx);
+        const rest = oid.slice(idx + key.length + 1);
+        const suffix = rest.startsWith("_") ? rest.slice(1) : "";
+        found.set(`${prefix}|${suffix}`, { prefix, suffix });
+        break;
+      }
+    }
+  }
+  return [...found.values()].sort((a, b) => a.prefix.localeCompare(b.prefix));
+}
+
+const DEFAULTS = {
+  show_badges: true,
+  show_strip: true,
+  strip_days: 14,
+  show_feiertag: true,
+  show_ferien: true,
+  suffix: "",
+};
 
 class SchulferienCard extends HTMLElement {
   setConfig(config) {
     if (!config.prefix) {
-      throw new Error('Bitte "prefix" angeben, z. B. prefix: schulferien_bayern');
+      throw new Error('Bitte "prefix" angeben oder im visuellen Editor eine Region wählen.');
     }
-    this._config = { show_strip: true, suffix: "", ...config };
+    this._config = { ...DEFAULTS, ...config };
     this._fp = null;
   }
 
@@ -45,10 +80,10 @@ class SchulferienCard extends HTMLElement {
       ["sensor", "naechster_feiertag"], ["sensor", "naechste_schulferien"],
       ["sensor", "status"],
     ];
-    return ids.map(([d, k]) => {
+    return [this._config, ...ids.map(([d, k]) => {
       const s = this._st(d, k);
       return s ? [s.state, s.attributes] : null;
-    });
+    })];
   }
 
   _fmt(iso) {
@@ -85,14 +120,14 @@ class SchulferienCard extends HTMLElement {
     if (!hs && !hf && !combined) {
       this.innerHTML = `<ha-card><div class="sfc-wrap">
         Keine Entitäten mit Präfix <code>${c.prefix}</code> gefunden.<br>
-        Präfix/Suffix bitte aus der Infobox „Entitäten" im Add-on übernehmen
-        (ohne den Entitätsteil, z. B. <code>schulferien_bayern</code>).</div></ha-card>`;
+        Region im visuellen Editor wählen oder Präfix aus der Infobox „Entitäten"
+        im Add-on übernehmen (z. B. <code>schulferien_bayern</code>).</div></ha-card>`;
       return;
     }
 
-    // Daten zusammensetzen – funktioniert für Einzel-, Feiertage- und Kombi-Modus
     const a = combined ? combined.attributes : {};
-    const strip = (nf?.attributes.vorschau) || a.vorschau || [];
+    const days = Math.max(3, Math.min(14, Number(c.strip_days) || 14));
+    const strip = ((nf?.attributes.vorschau) || a.vorschau || []).slice(0, days);
     const nextFt = nf
       ? { name: nf.state !== "unknown" ? nf.state : null, datum: nf.attributes.datum, in: nf.attributes.in_tagen }
       : { name: a.naechster_feiertag, datum: a.naechster_feiertag_datum, in: a.naechster_feiertag_in_tagen };
@@ -102,11 +137,12 @@ class SchulferienCard extends HTMLElement {
       : { name: a.naechste_schulferien, beginn: a.schulferien_beginn,
           ende: a.schulferien_ende, in: a.schulferien_in_tagen, aktuell: a.aktuell_ferien };
 
-    const badges = combined
-      ? `<div class="badge ${["Ferien","Feiertag","Wochenende"].includes(combined.state) ? "on" : ""}">
+    const badges = !c.show_badges ? "" : `<div class="badges">${combined
+      ? `<div class="badge ${["Ferien", "Feiertag", "Wochenende"].includes(combined.state) ? "on" : ""}">
            Heute: <b>${combined.state}</b></div>`
       : [this._badge("Heute schulfrei", hs, false), this._badge("Morgen schulfrei", ms, false),
-         this._badge("Heute Feiertag", hf, true), this._badge("Morgen Feiertag", mf, true)].join("");
+         this._badge("Heute Feiertag", hf, true), this._badge("Morgen Feiertag", mf, true)].join("")
+    }</div>`;
 
     const stripHtml = c.show_strip && strip.length ? `
       <div class="strip">${strip.map((d, i) => `
@@ -122,27 +158,36 @@ class SchulferienCard extends HTMLElement {
       </div>` : "";
 
     const rows = [];
-    if (nextFe.aktuell) rows.push(`<div class="row live"><span class="ico">🏖️</span>
-      <span class="nm">${nextFe.aktuell}</span><span class="when">läuft gerade</span></div>`);
-    if (nextFt.name) rows.push(`<div class="row"><span class="ico">★</span>
-      <span class="nm">${nextFt.name} <small>${this._fmt(nextFt.datum)}</small></span>
-      <span class="when">${this._in(nextFt.in)}</span></div>`);
-    if (nextFe.name) rows.push(`<div class="row"><span class="ico">🏖️</span>
-      <span class="nm">${nextFe.name} <small>${this._fmt(nextFe.beginn)} – ${this._fmt(nextFe.ende)}</small></span>
-      <span class="when">${this._in(nextFe.in)}</span></div>`);
+    if (c.show_ferien && nextFe.aktuell) {
+      rows.push(`<div class="row live"><span class="ico">🏖️</span>
+        <span class="nm">${nextFe.aktuell}</span><span class="when">läuft gerade</span></div>`);
+    }
+    if (c.show_feiertag && nextFt.name) {
+      rows.push(`<div class="row"><span class="ico">★</span>
+        <span class="nm">${nextFt.name} <small>${this._fmt(nextFt.datum)}</small></span>
+        <span class="when">${this._in(nextFt.in)}</span></div>`);
+    }
+    if (c.show_ferien && nextFe.name) {
+      rows.push(`<div class="row"><span class="ico">🏖️</span>
+        <span class="nm">${nextFe.name} <small>${this._fmt(nextFe.beginn)} – ${this._fmt(nextFe.ende)}</small></span>
+        <span class="when">${this._in(nextFe.in)}</span></div>`);
+    }
+    const rowsHtml = (c.show_feiertag || c.show_ferien)
+      ? `<div class="rows">${rows.join("") || "<small>Keine anstehenden Termine.</small>"}</div>`
+      : "";
 
     this.innerHTML = `
       <ha-card ${c.title ? `header="${c.title}"` : ""}>
         <div class="sfc-wrap">
-          <div class="badges">${badges}</div>
+          ${badges}
           ${stripHtml}
-          <div class="rows">${rows.join("") || "<small>Keine anstehenden Termine.</small>"}</div>
+          ${rowsHtml}
         </div>
       </ha-card>
       <style>
-        .sfc-wrap{padding:0 16px 16px}
+        .sfc-wrap{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
         ha-card:not([header]) .sfc-wrap{padding-top:16px}
-        .badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+        .badges{display:flex;flex-wrap:wrap;gap:6px}
         .badge{font-size:.8rem;border-radius:8px;padding:4px 10px;
           background:var(--secondary-background-color);color:var(--secondary-text-color);
           border:1px solid var(--divider-color)}
@@ -158,7 +203,7 @@ class SchulferienCard extends HTMLElement {
         .strip .d.ferien .box{background:rgba(232,162,61,.55);border-color:#e8a23d}
         .strip .d.feiertag .box{background:rgba(122,162,255,.6);border-color:#7aa2ff}
         .strip .d.wochenende .box{background:rgba(138,148,163,.25)}
-        .legend{display:flex;gap:12px;font-size:.68rem;color:var(--secondary-text-color);margin:7px 0 12px}
+        .legend{display:flex;gap:12px;font-size:.68rem;color:var(--secondary-text-color);margin-top:-6px}
         .legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px}
         .lg-ferien{background:#e8a23d}.lg-feiertag{background:#7aa2ff}.lg-we{background:rgba(138,148,163,.45)}
         .rows{display:flex;flex-direction:column;gap:6px}
@@ -173,15 +218,104 @@ class SchulferienCard extends HTMLElement {
 
   getCardSize() { return 4; }
 
-  static getStubConfig() {
-    return { prefix: "schulferien_bayern", title: "Schulferien", show_strip: true };
+  static getConfigElement() {
+    return document.createElement("schulferien-card-editor");
+  }
+
+  static getStubConfig(hass) {
+    const first = hass ? detectRegions(hass)[0] : null;
+    const stub = { prefix: first ? first.prefix : "schulferien_bayern" };
+    if (first && first.suffix) stub.suffix = first.suffix;
+    return stub;
+  }
+}
+
+/* ------------------------------- Visueller Editor ------------------------------- */
+
+const EDITOR_LABELS = {
+  region: "Region (vom Add-on angelegt)",
+  title: "Titel",
+  show_badges: "Status-Badges (heute/morgen) anzeigen",
+  show_strip: "Tages-Streifen anzeigen",
+  strip_days: "Tage im Streifen",
+  show_feiertag: "Nächsten Feiertag anzeigen",
+  show_ferien: "Nächste Schulferien anzeigen",
+};
+
+class SchulferienCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = { ...DEFAULTS, ...config };
+    this._update();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._update();
+  }
+
+  _update() {
+    if (!this._hass || !this._config) return;
+
+    if (!this._form) {
+      this._form = document.createElement("ha-form");
+      this._form.computeLabel = (s) => EDITOR_LABELS[s.name] || s.name;
+      this._form.addEventListener("value-changed", (ev) => {
+        const v = ev.detail.value || {};
+        const [prefix, suffix = ""] = String(v.region || "").split("|");
+        const config = { type: "custom:schulferien-card", prefix: prefix || this._config.prefix };
+        if (suffix) config.suffix = suffix;
+        if (v.title) config.title = v.title;
+        if (v.show_badges === false) config.show_badges = false;
+        if (v.show_strip === false) config.show_strip = false;
+        if (v.show_feiertag === false) config.show_feiertag = false;
+        if (v.show_ferien === false) config.show_ferien = false;
+        if (v.strip_days && Number(v.strip_days) !== 14) config.strip_days = Number(v.strip_days);
+        this._config = { ...DEFAULTS, ...config };
+        this.dispatchEvent(new CustomEvent("config-changed",
+          { detail: { config }, bubbles: true, composed: true }));
+      });
+      this.appendChild(this._form);
+    }
+
+    const regions = detectRegions(this._hass);
+    const options = regions.map((r) => ({
+      value: `${r.prefix}|${r.suffix}`,
+      label: r.prefix.replace(/^(schulferien|feiertage)_/, (m, p) =>
+        (p === "feiertage" ? "Feiertage: " : "Schulferien: ")) + (r.suffix ? ` (Suffix: ${r.suffix})` : ""),
+    }));
+    const current = `${this._config.prefix || ""}|${this._config.suffix || ""}`;
+    if (this._config.prefix && !options.some((o) => o.value === current)) {
+      options.push({ value: current, label: `${this._config.prefix} (Entitäten nicht gefunden)` });
+    }
+
+    this._form.hass = this._hass;
+    this._form.schema = [
+      { name: "region", selector: { select: { mode: "dropdown", options } } },
+      { name: "title", selector: { text: {} } },
+      { name: "show_badges", selector: { boolean: {} } },
+      { name: "show_strip", selector: { boolean: {} } },
+      { name: "strip_days", selector: { number: { min: 3, max: 14, step: 1, mode: "slider" } } },
+      { name: "show_feiertag", selector: { boolean: {} } },
+      { name: "show_ferien", selector: { boolean: {} } },
+    ];
+    this._form.data = {
+      region: current,
+      title: this._config.title || "",
+      show_badges: this._config.show_badges !== false,
+      show_strip: this._config.show_strip !== false,
+      strip_days: Number(this._config.strip_days) || 14,
+      show_feiertag: this._config.show_feiertag !== false,
+      show_ferien: this._config.show_ferien !== false,
+    };
   }
 }
 
 customElements.define("schulferien-card", SchulferienCard);
+customElements.define("schulferien-card-editor", SchulferienCardEditor);
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "schulferien-card",
   name: "Schulferien Card",
-  description: "Status, 14-Tage-Vorschau und nächste Termine des Schulferien & Feiertage Managers",
+  description: "Status, Tages-Vorschau und nächste Termine des Schulferien & Feiertage Managers",
+  preview: true,
 });
