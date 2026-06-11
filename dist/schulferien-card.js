@@ -6,7 +6,7 @@
  *
  * Alle Optionen sind über den visuellen Editor einstellbar.
  */
-const CARD_VERSION = "1.3.2";
+const CARD_VERSION = "1.3.3";
 console.info(`%c SCHULFERIEN-CARD %c v${CARD_VERSION} `,
   "color:#1a1408;background:#e8a23d;font-weight:700", "color:#e8a23d;background:#1f2630");
 
@@ -154,7 +154,7 @@ class SchulferienCard extends HTMLElement {
           : null);
     const banner = (c.show_banner !== false && bannerData)
       ? `<div class="banner">🏖️ <span>Es sind <b>${bannerData.name}</b>${
-          bannerData.ende ? ` – bis ${this._fmt(bannerData.ende)}` : "!"}</span>${
+          bannerData.ende ? ` bis ${this._fmt(bannerData.ende)}` : "!"}</span>${
           bannerData.demo ? '<span class="demo-chip">Demo</span>' : ""}</div>`
       : "";
 
