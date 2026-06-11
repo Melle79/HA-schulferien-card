@@ -6,7 +6,7 @@
  *
  * Alle Optionen sind über den visuellen Editor einstellbar.
  */
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.3.1";
 console.info(`%c SCHULFERIEN-CARD %c v${CARD_VERSION} `,
   "color:#1a1408;background:#e8a23d;font-weight:700", "color:#e8a23d;background:#1f2630");
 
@@ -183,21 +183,24 @@ class SchulferienCard extends HTMLElement {
         <span><i class="lg-we"></i>Wochenende</span>
       </div>` : "";
 
-    const rows = [];
+    // Termine sammeln und chronologisch sortieren
+    const events = [];
     if (c.show_ferien && nextFe.aktuell && !banner) {
-      rows.push(`<div class="row live"><span class="ico">🏖️</span>
-        <span class="nm">${nextFe.aktuell}</span><span class="when">läuft gerade</span></div>`);
+      events.push({ d: "0000-00-00", html: `<div class="row live"><span class="ico">🏖️</span>
+        <span class="nm">${nextFe.aktuell}</span><span class="when">läuft gerade</span></div>` });
     }
     if (c.show_feiertag && nextFt.name) {
-      rows.push(`<div class="row"><span class="ico">★</span>
+      events.push({ d: nextFt.datum || "9999-12-31", html: `<div class="row"><span class="ico">★</span>
         <span class="nm">${nextFt.name} <small>${this._fmt(nextFt.datum)}</small></span>
-        <span class="when">${this._in(nextFt.in)}</span></div>`);
+        <span class="when">${this._in(nextFt.in)}</span></div>` });
     }
     if (c.show_ferien && nextFe.name) {
-      rows.push(`<div class="row"><span class="ico">🏖️</span>
+      events.push({ d: nextFe.beginn || "9999-12-31", html: `<div class="row"><span class="ico">🏖️</span>
         <span class="nm">${nextFe.name} <small>${this._fmt(nextFe.beginn)} – ${this._fmt(nextFe.ende)}</small></span>
-        <span class="when">${this._in(nextFe.in)}</span></div>`);
+        <span class="when">${this._in(nextFe.in)}</span></div>` });
     }
+    events.sort((x, y) => x.d.localeCompare(y.d));
+    const rows = events.map((e) => e.html);
     const rowsHtml = (c.show_feiertag || c.show_ferien)
       ? `<div class="rows">${rows.join("") || "<small>Keine anstehenden Termine.</small>"}</div>`
       : "";
