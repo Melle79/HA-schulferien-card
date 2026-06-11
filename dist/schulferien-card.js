@@ -6,7 +6,7 @@
  *
  * Alle Optionen sind über den visuellen Editor einstellbar.
  */
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.3.0";
 console.info(`%c SCHULFERIEN-CARD %c v${CARD_VERSION} `,
   "color:#1a1408;background:#e8a23d;font-weight:700", "color:#e8a23d;background:#1f2630");
 
@@ -38,7 +38,9 @@ function detectRegions(hass) {
 }
 
 const DEFAULTS = {
+  show_banner: true,
   show_badges: true,
+  show_banner: "Ferien-Banner anzeigen (wenn Ferien laufen)",
   badge_heute_schulfrei: "Badge: Heute schulfrei",
   badge_morgen_schulfrei: "Badge: Morgen schulfrei",
   badge_heute_feiertag: "Badge: Heute Feiertag",
@@ -137,9 +139,16 @@ class SchulferienCard extends HTMLElement {
       : { name: a.naechster_feiertag, datum: a.naechster_feiertag_datum, in: a.naechster_feiertag_in_tagen };
     const nextFe = ns
       ? { name: ns.state !== "unknown" ? ns.state : null, beginn: ns.attributes.beginn,
-          ende: ns.attributes.ende, in: ns.attributes.in_tagen, aktuell: ns.attributes.aktuell_ferien }
+          ende: ns.attributes.ende, in: ns.attributes.in_tagen, aktuell: ns.attributes.aktuell_ferien,
+          aktuellEnde: ns.attributes.aktuell_ferien_ende }
       : { name: a.naechste_schulferien, beginn: a.schulferien_beginn,
-          ende: a.schulferien_ende, in: a.schulferien_in_tagen, aktuell: a.aktuell_ferien };
+          ende: a.schulferien_ende, in: a.schulferien_in_tagen, aktuell: a.aktuell_ferien,
+          aktuellEnde: a.aktuell_ferien_ende };
+
+    const banner = (c.show_banner !== false && nextFe.aktuell)
+      ? `<div class="banner">🏖️ <span>Es sind <b>${nextFe.aktuell}</b>${
+          nextFe.aktuellEnde ? ` – bis ${this._fmt(nextFe.aktuellEnde)}` : "!"}</span></div>`
+      : "";
 
     const bf = {
       hs: c.show_badges !== false && c.badge_heute_schulfrei !== false,
@@ -175,7 +184,7 @@ class SchulferienCard extends HTMLElement {
       </div>` : "";
 
     const rows = [];
-    if (c.show_ferien && nextFe.aktuell) {
+    if (c.show_ferien && nextFe.aktuell && !banner) {
       rows.push(`<div class="row live"><span class="ico">🏖️</span>
         <span class="nm">${nextFe.aktuell}</span><span class="when">läuft gerade</span></div>`);
     }
@@ -196,6 +205,7 @@ class SchulferienCard extends HTMLElement {
     this.innerHTML = `
       <ha-card ${c.title ? `header="${c.title}"` : ""}>
         <div class="sfc-wrap">
+          ${banner}
           ${badges}
           ${stripHtml}
           ${rowsHtml}
@@ -204,6 +214,11 @@ class SchulferienCard extends HTMLElement {
       <style>
         .sfc-wrap{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
         ha-card:not([header]) .sfc-wrap{padding-top:16px}
+        .banner{display:flex;align-items:center;gap:9px;
+          background:linear-gradient(100deg,#e8a23d,#f2c178);color:#1a1408;
+          border-radius:10px;padding:10px 14px;font-size:.95rem;
+          box-shadow:0 2px 8px rgba(232,162,61,.25)}
+        .banner b{font-weight:700}
         .badges{display:flex;flex-wrap:wrap;gap:6px}
         .badge{font-size:.8rem;border-radius:8px;padding:4px 10px;
           background:var(--secondary-background-color);color:var(--secondary-text-color);
@@ -252,6 +267,7 @@ class SchulferienCard extends HTMLElement {
 const EDITOR_LABELS = {
   region: "Region (vom Add-on angelegt)",
   title: "Titel",
+  show_banner: "Ferien-Banner anzeigen (wenn Ferien laufen)",
   badge_heute_schulfrei: "Badge: Heute schulfrei",
   badge_morgen_schulfrei: "Badge: Morgen schulfrei",
   badge_heute_feiertag: "Badge: Heute Feiertag",
@@ -285,6 +301,7 @@ class SchulferienCardEditor extends HTMLElement {
         const config = { type: "custom:schulferien-card", prefix: prefix || this._config.prefix };
         if (suffix) config.suffix = suffix;
         if (v.title) config.title = v.title;
+        if (v.show_banner === false) config.show_banner = false;
         if (v.badge_heute_schulfrei === false) config.badge_heute_schulfrei = false;
         if (v.badge_morgen_schulfrei === false) config.badge_morgen_schulfrei = false;
         if (v.badge_heute_feiertag === false) config.badge_heute_feiertag = false;
@@ -315,6 +332,7 @@ class SchulferienCardEditor extends HTMLElement {
     this._form.schema = [
       { name: "region", selector: { select: { mode: "dropdown", options } } },
       { name: "title", selector: { text: {} } },
+      { name: "show_banner", selector: { boolean: {} } },
       { name: "", type: "grid", schema: [
         { name: "badge_heute_schulfrei", selector: { boolean: {} } },
         { name: "badge_morgen_schulfrei", selector: { boolean: {} } },
@@ -329,6 +347,7 @@ class SchulferienCardEditor extends HTMLElement {
     this._form.data = {
       region: current,
       title: this._config.title || "",
+      show_banner: this._config.show_banner !== false,
       badge_heute_schulfrei: this._config.badge_heute_schulfrei !== false,
       badge_morgen_schulfrei: this._config.badge_morgen_schulfrei !== false,
       badge_heute_feiertag: this._config.badge_heute_feiertag !== false,
