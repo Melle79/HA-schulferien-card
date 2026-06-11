@@ -6,7 +6,7 @@
  *
  * Alle Optionen sind über den visuellen Editor einstellbar.
  */
-const CARD_VERSION = "1.3.4";
+const CARD_VERSION = "1.3.5";
 console.info(`%c SCHULFERIEN-CARD %c v${CARD_VERSION} `,
   "color:#1a1408;background:#e8a23d;font-weight:700", "color:#e8a23d;background:#1f2630");
 
@@ -233,9 +233,11 @@ class SchulferienCard extends HTMLElement {
         .banner .demo-chip{margin-left:auto;font-size:.68rem;font-weight:600;
           background:rgba(26,20,8,.18);padding:2px 8px;border-radius:99px;letter-spacing:.04em}
         .badges{display:flex;flex-wrap:wrap;gap:6px}
-        .badge{font-size:.8rem;border-radius:8px;padding:4px 10px;
+        .badge{display:inline-flex;align-items:center;gap:4px;height:30px;box-sizing:border-box;
+          font-size:.8rem;line-height:1;border-radius:8px;padding:0 11px;
           background:var(--secondary-background-color);color:var(--secondary-text-color);
           border:1px solid var(--divider-color)}
+        .badge b{font-size:inherit;line-height:1}
         .badge.on{background:var(--success-color,#4cc38a);border-color:var(--success-color,#4cc38a);
           color:#0d2418}
         .badge.on.ft{background:#7aa2ff;border-color:#7aa2ff;color:#101b38}
