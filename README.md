@@ -2,6 +2,8 @@
 
 Custom Lovelace Card für Home Assistant – zeigt Status, 14-Tage-Vorschau und die nächsten Termine des [Schulferien & Feiertage Manager Add-ons](https://github.com/Melle79/HA-schulferien_feiertage).
 
+[![In HACS öffnen](https://img.shields.io/badge/HACS-Repository_in_Home_Assistant_öffnen-41BDF5?logo=home-assistant&logoColor=white&style=for-the-badge)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Melle79&repository=HA-schulferien-card&category=dashboard)
+
 **Funktionen:**
 - Status-Badges: Heute/Morgen schulfrei, Heute/Morgen Feiertag
 - 14-Tage-Streifen: Ferien (gelb), Feiertage (blau), Wochenenden (grau), heute umrandet
@@ -16,6 +18,8 @@ Custom Lovelace Card für Home Assistant – zeigt Status, 14-Tage-Vorschau und 
 ## Installation
 
 ### Über HACS (empfohlen)
+
+Entweder den Badge oben anklicken (öffnet das Repository direkt in HACS auf deiner HA-Instanz) – oder manuell:
 
 1. HACS → ⋮ (oben rechts) → **Benutzerdefinierte Repositories** → URL `https://github.com/Melle79/HA-schulferien-card`, Typ **Dashboard** → hinzufügen
 2. „Schulferien Card" installieren – HACS trägt die Ressource automatisch ein
