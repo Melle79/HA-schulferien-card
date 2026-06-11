@@ -47,6 +47,7 @@ prefix: schulferien_bayern
 |---|---|---|---|
 | `prefix` | ✅ | – | Entity-ID-Präfix der Region, z. B. `schulferien_bayern` oder `feiertage_bayern` |
 | `title` | – | (leer) | Überschrift der Karte |
+| `demo_banner` | – | `false` | Ferien-Banner testweise einblenden (mit „Demo"-Markierung), auch außerhalb der Ferien |
 | `show_banner` | – | `true` | Hervorgehobener Banner „Es sind {Ferien} – bis {Datum}", nur während laufender Ferien (Enddatum ab Add-on v1.2.1) |
 | `suffix` | – | (leer) | Suffix, falls beim Anlegen der Region vergeben (z. B. `kinder`) |
 | `badge_heute_schulfrei` | – | `true` | Badge „Heute schulfrei" anzeigen |
