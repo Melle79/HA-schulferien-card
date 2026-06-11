@@ -6,7 +6,7 @@
  *
  * Alle Optionen sind über den visuellen Editor einstellbar.
  */
-const CARD_VERSION = "1.1.0";
+const CARD_VERSION = "1.2.0";
 console.info(`%c SCHULFERIEN-CARD %c v${CARD_VERSION} `,
   "color:#1a1408;background:#e8a23d;font-weight:700", "color:#e8a23d;background:#1f2630");
 
@@ -39,6 +39,10 @@ function detectRegions(hass) {
 
 const DEFAULTS = {
   show_badges: true,
+  badge_heute_schulfrei: "Badge: Heute schulfrei",
+  badge_morgen_schulfrei: "Badge: Morgen schulfrei",
+  badge_heute_feiertag: "Badge: Heute Feiertag",
+  badge_morgen_feiertag: "Badge: Morgen Feiertag",
   show_strip: true,
   strip_days: 14,
   show_feiertag: true,
@@ -137,12 +141,25 @@ class SchulferienCard extends HTMLElement {
       : { name: a.naechste_schulferien, beginn: a.schulferien_beginn,
           ende: a.schulferien_ende, in: a.schulferien_in_tagen, aktuell: a.aktuell_ferien };
 
-    const badges = !c.show_badges ? "" : `<div class="badges">${combined
-      ? `<div class="badge ${["Ferien", "Feiertag", "Wochenende"].includes(combined.state) ? "on" : ""}">
-           Heute: <b>${combined.state}</b></div>`
-      : [this._badge("Heute schulfrei", hs, false), this._badge("Morgen schulfrei", ms, false),
-         this._badge("Heute Feiertag", hf, true), this._badge("Morgen Feiertag", mf, true)].join("")
-    }</div>`;
+    const bf = {
+      hs: c.show_badges !== false && c.badge_heute_schulfrei !== false,
+      ms: c.show_badges !== false && c.badge_morgen_schulfrei !== false,
+      hf: c.show_badges !== false && c.badge_heute_feiertag !== false,
+      mf: c.show_badges !== false && c.badge_morgen_feiertag !== false,
+    };
+    const badgeItems = combined
+      ? ((bf.hs || bf.ms || bf.hf || bf.mf)
+          ? [`<div class="badge ${["Ferien", "Feiertag", "Wochenende"].includes(combined.state) ? "on" : ""}">
+               Heute: <b>${combined.state}</b></div>`]
+          : [])
+      : [
+          bf.hs ? this._badge("Heute schulfrei", hs, false) : "",
+          bf.ms ? this._badge("Morgen schulfrei", ms, false) : "",
+          bf.hf ? this._badge("Heute Feiertag", hf, true) : "",
+          bf.mf ? this._badge("Morgen Feiertag", mf, true) : "",
+        ];
+    const badgesJoined = badgeItems.join("");
+    const badges = badgesJoined ? `<div class="badges">${badgesJoined}</div>` : "";
 
     const stripHtml = c.show_strip && strip.length ? `
       <div class="strip">${strip.map((d, i) => `
@@ -235,7 +252,10 @@ class SchulferienCard extends HTMLElement {
 const EDITOR_LABELS = {
   region: "Region (vom Add-on angelegt)",
   title: "Titel",
-  show_badges: "Status-Badges (heute/morgen) anzeigen",
+  badge_heute_schulfrei: "Badge: Heute schulfrei",
+  badge_morgen_schulfrei: "Badge: Morgen schulfrei",
+  badge_heute_feiertag: "Badge: Heute Feiertag",
+  badge_morgen_feiertag: "Badge: Morgen Feiertag",
   show_strip: "Tages-Streifen anzeigen",
   strip_days: "Tage im Streifen",
   show_feiertag: "Nächsten Feiertag anzeigen",
@@ -265,7 +285,10 @@ class SchulferienCardEditor extends HTMLElement {
         const config = { type: "custom:schulferien-card", prefix: prefix || this._config.prefix };
         if (suffix) config.suffix = suffix;
         if (v.title) config.title = v.title;
-        if (v.show_badges === false) config.show_badges = false;
+        if (v.badge_heute_schulfrei === false) config.badge_heute_schulfrei = false;
+        if (v.badge_morgen_schulfrei === false) config.badge_morgen_schulfrei = false;
+        if (v.badge_heute_feiertag === false) config.badge_heute_feiertag = false;
+        if (v.badge_morgen_feiertag === false) config.badge_morgen_feiertag = false;
         if (v.show_strip === false) config.show_strip = false;
         if (v.show_feiertag === false) config.show_feiertag = false;
         if (v.show_ferien === false) config.show_ferien = false;
@@ -292,7 +315,12 @@ class SchulferienCardEditor extends HTMLElement {
     this._form.schema = [
       { name: "region", selector: { select: { mode: "dropdown", options } } },
       { name: "title", selector: { text: {} } },
-      { name: "show_badges", selector: { boolean: {} } },
+      { name: "", type: "grid", schema: [
+        { name: "badge_heute_schulfrei", selector: { boolean: {} } },
+        { name: "badge_morgen_schulfrei", selector: { boolean: {} } },
+        { name: "badge_heute_feiertag", selector: { boolean: {} } },
+        { name: "badge_morgen_feiertag", selector: { boolean: {} } },
+      ] },
       { name: "show_strip", selector: { boolean: {} } },
       { name: "strip_days", selector: { number: { min: 3, max: 14, step: 1, mode: "slider" } } },
       { name: "show_feiertag", selector: { boolean: {} } },
@@ -301,7 +329,10 @@ class SchulferienCardEditor extends HTMLElement {
     this._form.data = {
       region: current,
       title: this._config.title || "",
-      show_badges: this._config.show_badges !== false,
+      badge_heute_schulfrei: this._config.badge_heute_schulfrei !== false,
+      badge_morgen_schulfrei: this._config.badge_morgen_schulfrei !== false,
+      badge_heute_feiertag: this._config.badge_heute_feiertag !== false,
+      badge_morgen_feiertag: this._config.badge_morgen_feiertag !== false,
       show_strip: this._config.show_strip !== false,
       strip_days: Number(this._config.strip_days) || 14,
       show_feiertag: this._config.show_feiertag !== false,

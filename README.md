@@ -48,7 +48,11 @@ prefix: schulferien_bayern
 | `prefix` | ✅ | – | Entity-ID-Präfix der Region, z. B. `schulferien_bayern` oder `feiertage_bayern` |
 | `title` | – | (leer) | Überschrift der Karte |
 | `suffix` | – | (leer) | Suffix, falls beim Anlegen der Region vergeben (z. B. `kinder`) |
-| `show_badges` | – | `true` | Status-Badges (heute/morgen) anzeigen |
+| `badge_heute_schulfrei` | – | `true` | Badge „Heute schulfrei" anzeigen |
+| `badge_morgen_schulfrei` | – | `true` | Badge „Morgen schulfrei" anzeigen |
+| `badge_heute_feiertag` | – | `true` | Badge „Heute Feiertag" anzeigen |
+| `badge_morgen_feiertag` | – | `true` | Badge „Morgen Feiertag" anzeigen |
+| `show_badges` | – | `true` | Alle Badges auf einmal ausblenden (überstimmt die Einzelschalter) |
 | `show_strip` | – | `true` | Tages-Streifen anzeigen |
 | `strip_days` | – | `14` | Anzahl Tage im Streifen (3–14) |
 | `show_feiertag` | – | `true` | Nächsten Feiertag anzeigen |
